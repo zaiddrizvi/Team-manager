@@ -7,6 +7,9 @@ export default defineConfig({
     port: 5173
   },
   preview: {
-    allowedHosts: ['frontend-production-81b1.up.railway.app']
+    allowedHosts: [
+      'frontend-production-81b1.up.railway.app',
+      'team-managerfrontend.up.railway.app'
+    ]
   }
 });
