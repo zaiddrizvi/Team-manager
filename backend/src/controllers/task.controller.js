@@ -1,5 +1,7 @@
 import Project from '../models/Project.js';
+import Comment from '../models/Comment.js';
 import Task from '../models/Task.js';
+import { createNotifications } from '../utils/notifications.js';
 
 const populateTask = [
   { path: 'project', select: 'title description members' },
@@ -24,6 +26,30 @@ const assertAssigneeIsProjectMember = async (projectId, assignedTo) => {
   return project;
 };
 
+const getTaskForUser = async (taskId, user) => {
+  const task = await Task.findById(taskId)
+    .populate(populateTask)
+    .populate({ path: 'project', select: 'title description members createdBy' });
+
+  if (!task) {
+    const error = new Error('Task not found');
+    error.status = 404;
+    throw error;
+  }
+
+  const projectMembers = task.project.members || [];
+  const isProjectMember = projectMembers.some((memberId) => memberId.equals(user._id));
+  const isAssignee = task.assignedTo._id.equals(user._id);
+
+  if (user.role !== 'admin' && !isAssignee && !isProjectMember) {
+    const error = new Error('You cannot access this task');
+    error.status = 403;
+    throw error;
+  }
+
+  return task;
+};
+
 export const createTask = async (req, res, next) => {
   try {
     const { title, description, project, assignedTo, priority, dueDate } = req.body;
@@ -37,6 +63,16 @@ export const createTask = async (req, res, next) => {
       priority,
       dueDate,
       createdBy: req.user._id
+    });
+
+    await createNotifications({
+      recipients: [assignedTo],
+      actor: req.user._id,
+      type: 'task-assigned',
+      title: 'New task assigned',
+      message: `${req.user.name} assigned you "${title}"`,
+      project,
+      task: task._id
     });
 
     res.status(201).json(await task.populate(populateTask));
@@ -126,6 +162,7 @@ export const deleteTask = async (req, res, next) => {
       throw new Error('Task not found');
     }
     await task.deleteOne();
+    await Comment.deleteMany({ task: task._id });
     res.json({ message: 'Task deleted' });
   } catch (error) {
     next(error);
@@ -147,8 +184,60 @@ export const updateTaskStatus = async (req, res, next) => {
 
     task.status = req.body.status;
     await task.save();
+
+    await createNotifications({
+      recipients: [task.createdBy, task.assignedTo],
+      actor: req.user._id,
+      type: 'task-status',
+      title: 'Task status updated',
+      message: `${req.user.name} moved "${task.title}" to ${task.status}`,
+      project: task.project,
+      task: task._id
+    });
+
     res.json(await task.populate(populateTask));
   } catch (error) {
+    next(error);
+  }
+};
+
+export const getTaskComments = async (req, res, next) => {
+  try {
+    await getTaskForUser(req.params.id, req.user);
+    const comments = await Comment.find({ task: req.params.id })
+      .populate({ path: 'author', select: 'name email role' })
+      .sort({ createdAt: 1 });
+
+    res.json(comments);
+  } catch (error) {
+    if (error.status) res.status(error.status);
+    next(error);
+  }
+};
+
+export const addTaskComment = async (req, res, next) => {
+  try {
+    const task = await getTaskForUser(req.params.id, req.user);
+    const comment = await Comment.create({
+      task: task._id,
+      project: task.project._id,
+      author: req.user._id,
+      message: req.body.message
+    });
+
+    await createNotifications({
+      recipients: [task.assignedTo._id, task.createdBy, task.project.createdBy, ...task.project.members],
+      actor: req.user._id,
+      type: 'task-comment',
+      title: 'New task comment',
+      message: `${req.user.name} commented on "${task.title}"`,
+      project: task.project._id,
+      task: task._id
+    });
+
+    res.status(201).json(await comment.populate({ path: 'author', select: 'name email role' }));
+  } catch (error) {
+    if (error.status) res.status(error.status);
     next(error);
   }
 };

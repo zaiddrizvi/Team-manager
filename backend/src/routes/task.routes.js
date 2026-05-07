@@ -2,8 +2,10 @@ import express from 'express';
 import { body, param, query } from 'express-validator';
 import {
   createTask,
+  addTaskComment,
   deleteTask,
   getTask,
+  getTaskComments,
   getTasks,
   updateTask,
   updateTaskStatus
@@ -38,6 +40,17 @@ router.patch(
   validate,
   updateTaskStatus
 );
+
+router.route('/:id/comments')
+  .get(param('id').isMongoId().withMessage('Invalid task ID'), validate, getTaskComments)
+  .post(
+    [
+      param('id').isMongoId().withMessage('Invalid task ID'),
+      body('message').trim().notEmpty().withMessage('Comment is required').isLength({ max: 1200 }).withMessage('Comment is too long')
+    ],
+    validate,
+    addTaskComment
+  );
 
 router.route('/:id')
   .get(param('id').isMongoId().withMessage('Invalid task ID'), validate, getTask)

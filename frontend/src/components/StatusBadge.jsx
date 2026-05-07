@@ -1,12 +1,12 @@
 const styles = {
-  todo: 'bg-slate-100 text-slate-700',
-  'in-progress': 'bg-amber-100 text-amber-800',
-  done: 'bg-emerald-100 text-emerald-800'
+  todo: 'border-slate-200 bg-slate-50 text-slate-600',
+  'in-progress': 'border-amber-200 bg-amber-50 text-amber-700',
+  done: 'border-emerald-200 bg-emerald-50 text-emerald-700'
 };
 
 export default function StatusBadge({ status }) {
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
       {status}
     </span>
   );

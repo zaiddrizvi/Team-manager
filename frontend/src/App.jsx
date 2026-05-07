@@ -10,10 +10,10 @@ import Tasks from './pages/Tasks.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 
 const Layout = ({ children }) => (
-  <>
+  <div className="app-shell min-h-screen">
     <Navbar />
-    <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
-  </>
+    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:ml-72 lg:px-8 lg:py-8">{children}</main>
+  </div>
 );
 
 export default function App() {

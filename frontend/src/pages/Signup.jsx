@@ -24,9 +24,12 @@ export default function Signup() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <form onSubmit={handleSubmit} className="panel w-full max-w-md space-y-4 p-6">
-        <h1 className="text-2xl font-bold text-slate-900">Create account</h1>
+    <main className="grid min-h-screen place-items-center px-4 py-10">
+      <form onSubmit={handleSubmit} className="panel w-full max-w-md space-y-5 p-7">
+        <div>
+          <p className="eyebrow">Team Task Workspace</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">Create account</h1>
+        </div>
         <div className="space-y-1">
           <label htmlFor="name">Name</label>
           <input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -49,7 +52,7 @@ export default function Signup() {
         {error && <p className="text-sm text-rose-600">{error}</p>}
         <button className="btn btn-primary w-full" disabled={loading}>{loading ? 'Creating...' : 'Sign up'}</button>
         <p className="text-center text-sm text-slate-600">
-          Already have an account? <Link className="font-semibold text-teal-700" to="/login">Login</Link>
+          Already have an account? <Link className="font-semibold text-slate-950 underline decoration-slate-300 underline-offset-4" to="/login">Login</Link>
         </p>
       </form>
     </main>

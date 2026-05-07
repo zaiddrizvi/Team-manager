@@ -24,11 +24,12 @@ export default function Login() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <form onSubmit={handleSubmit} className="panel w-full max-w-md space-y-4 p-6">
+    <main className="grid min-h-screen place-items-center px-4 py-10">
+      <form onSubmit={handleSubmit} className="panel w-full max-w-md space-y-5 p-7">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Login</h1>
-          <p className="mt-1 text-sm text-slate-500">Use admin@test.com or member@test.com with 123456.</p>
+          <p className="eyebrow">Team Task Workspace</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">Welcome back</h1>
+          <p className="muted mt-2">Use admin@test.com or member@test.com with 123456.</p>
         </div>
         <div className="space-y-1">
           <label htmlFor="email">Email</label>
@@ -41,7 +42,7 @@ export default function Login() {
         {error && <p className="text-sm text-rose-600">{error}</p>}
         <button className="btn btn-primary w-full" disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
         <p className="text-center text-sm text-slate-600">
-          Need an account? <Link className="font-semibold text-teal-700" to="/signup">Sign up</Link>
+          Need an account? <Link className="font-semibold text-slate-950 underline decoration-slate-300 underline-offset-4" to="/signup">Sign up</Link>
         </p>
       </form>
     </main>

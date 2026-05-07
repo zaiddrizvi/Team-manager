@@ -69,6 +69,10 @@ export default function TaskForm({ projects, initialTask, onSaved, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="panel space-y-4 p-5">
+      <div>
+        <p className="eyebrow">{initialTask ? 'Update task' : 'New task'}</p>
+        <h2 className="mt-1 text-lg font-semibold text-slate-950">{initialTask ? 'Edit task' : 'Create task'}</h2>
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
           <label htmlFor="title">Title</label>

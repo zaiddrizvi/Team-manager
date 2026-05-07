@@ -1,6 +1,9 @@
 import Project from '../models/Project.js';
+import Comment from '../models/Comment.js';
+import Notification from '../models/Notification.js';
 import Task from '../models/Task.js';
 import User from '../models/User.js';
+import { createNotifications } from '../utils/notifications.js';
 
 const populateProject = [
   { path: 'createdBy', select: 'name email role' },
@@ -69,6 +72,15 @@ export const addMember = async (req, res, next) => {
     if (!project.members.some((id) => id.equals(member._id))) {
       project.members.push(member._id);
       await project.save();
+
+      await createNotifications({
+        recipients: [member._id],
+        actor: req.user._id,
+        type: 'project-member',
+        title: 'Added to project',
+        message: `${req.user.name} added you to "${project.title}"`,
+        project: project._id
+      });
     }
 
     res.json(await project.populate(populateProject));
@@ -105,6 +117,8 @@ export const deleteProject = async (req, res, next) => {
     }
 
     await Task.deleteMany({ project: project._id });
+    await Comment.deleteMany({ project: project._id });
+    await Notification.deleteMany({ project: project._id });
     await project.deleteOne();
     res.json({ message: 'Project deleted' });
   } catch (error) {

@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { MessageSquare, Send, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/client.js';
@@ -14,6 +14,8 @@ export default function ProjectDetails() {
   const [tasks, setTasks] = useState([]);
   const [email, setEmail] = useState('');
   const [editingTask, setEditingTask] = useState(null);
+  const [commentsByTask, setCommentsByTask] = useState({});
+  const [commentDrafts, setCommentDrafts] = useState({});
   const [error, setError] = useState('');
 
   const loadData = async () => {
@@ -24,6 +26,13 @@ export default function ProjectDetails() {
       ]);
       setProject(projectRes.data);
       setTasks(taskRes.data);
+      const commentEntries = await Promise.all(
+        taskRes.data.map(async (task) => {
+          const { data } = await api.get(`/tasks/${task._id}/comments`);
+          return [task._id, data];
+        })
+      );
+      setCommentsByTask(Object.fromEntries(commentEntries));
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to load project');
     }
@@ -62,15 +71,29 @@ export default function ProjectDetails() {
     loadData();
   };
 
+  const addComment = async (event, taskId) => {
+    event.preventDefault();
+    const message = commentDrafts[taskId]?.trim();
+    if (!message) return;
+
+    const { data } = await api.post(`/tasks/${taskId}/comments`, { message });
+    setCommentsByTask((current) => ({
+      ...current,
+      [taskId]: [...(current[taskId] || []), data]
+    }));
+    setCommentDrafts((current) => ({ ...current, [taskId]: '' }));
+  };
+
   if (error) return <p className="text-rose-600">{error}</p>;
   if (!project) return <p className="text-slate-500">Loading project...</p>;
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="page-heading">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{project.title}</h1>
-          <p className="mt-1 text-slate-500">{project.description}</p>
+          <p className="eyebrow">Project</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">{project.title}</h1>
+          <p className="muted mt-2 max-w-3xl">{project.description}</p>
         </div>
         {user.role === 'admin' && (
           <button className="btn btn-danger" onClick={deleteProject}><Trash2 size={17} />Delete project</button>
@@ -78,10 +101,18 @@ export default function ProjectDetails() {
       </div>
 
       <div className="panel p-5">
-        <h2 className="text-lg font-semibold text-slate-900">Members</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="eyebrow">Access</p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-950">Members</h2>
+          </div>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-500">
+            {project.members.length} total
+          </span>
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {project.members.map((member) => (
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700" key={member._id}>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700" key={member._id}>
               {member.name} ({member.email})
             </span>
           ))}
@@ -107,20 +138,23 @@ export default function ProjectDetails() {
       )}
 
       <div className="panel overflow-hidden">
-        <div className="border-b border-slate-200 p-5">
-          <h2 className="text-lg font-semibold text-slate-900">Tasks</h2>
+        <div className="border-b border-slate-200/80 p-5">
+          <p className="eyebrow">Delivery</p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-950">Tasks</h2>
         </div>
         <div className="divide-y divide-slate-200">
           {tasks.map((task) => (
-            <div key={task._id} className="grid gap-3 p-5 md:grid-cols-[1fr_auto]">
+            <div key={task._id} className="grid gap-4 p-5 transition hover:bg-slate-50/70 md:grid-cols-[1fr_auto]">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold text-slate-900">{task.title}</h3>
+                  <h3 className="font-semibold text-slate-950">{task.title}</h3>
                   <StatusBadge status={task.status} />
-                  {task.isOverdue && <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">overdue</span>}
+                  {task.isOverdue && <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">overdue</span>}
                 </div>
-                <p className="mt-1 text-sm text-slate-600">{task.description}</p>
-                <p className="mt-2 text-sm text-slate-500">Assigned to {task.assignedTo.name} • Due {new Date(task.dueDate).toLocaleDateString()} • {task.priority}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{task.description}</p>
+                <p className="mt-3 text-sm text-slate-500">
+                  Assigned to {task.assignedTo.name} / Due {new Date(task.dueDate).toLocaleDateString()} / {task.priority}
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <select value={task.status} onChange={(e) => updateStatus(task._id, e.target.value)} className="min-w-36">
@@ -135,9 +169,45 @@ export default function ProjectDetails() {
                   </>
                 )}
               </div>
+              <div className="md:col-span-2">
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-white">
+                  <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
+                    <MessageSquare size={16} />
+                    Comments
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                      {(commentsByTask[task._id] || []).length}
+                    </span>
+                  </div>
+                  <div className="space-y-3 p-4">
+                    {(commentsByTask[task._id] || []).map((comment) => (
+                      <div key={comment._id} className="rounded-xl bg-slate-50 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-950">{comment.author?.name}</p>
+                          <p className="text-xs font-medium text-slate-400">{new Date(comment.createdAt).toLocaleString()}</p>
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{comment.message}</p>
+                      </div>
+                    ))}
+                    {(commentsByTask[task._id] || []).length === 0 && (
+                      <p className="text-sm text-slate-400">No comments yet.</p>
+                    )}
+                    <form onSubmit={(event) => addComment(event, task._id)} className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        placeholder="Write a comment..."
+                        value={commentDrafts[task._id] || ''}
+                        onChange={(event) => setCommentDrafts((current) => ({ ...current, [task._id]: event.target.value }))}
+                      />
+                      <button className="btn btn-primary shrink-0">
+                        <Send size={16} />
+                        Comment
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
-          {tasks.length === 0 && <p className="p-5 text-slate-500">No tasks yet.</p>}
+          {tasks.length === 0 && <p className="empty-state">No tasks yet.</p>}
         </div>
       </div>
     </section>
